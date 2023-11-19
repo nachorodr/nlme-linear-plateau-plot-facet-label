@@ -1,0 +1,51 @@
+---
+title: "Script nlme-plot-facet-label"
+author: "Rodriguez, I"
+execute:
+  echo: false
+editor: visual
+output: true
+warning: false
+editor_options: 
+  chunk_output_type: inline
+format:
+  html:
+    code-fold: false
+    code-tools: false
+---
+
+```{r}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## Load packages
+
+```{r}
+library(tidyverse)
+library(nlme)
+library(ggpubr)
+library(data.table)
+library(writexl)
+library(RColorBrewer)
+```
+
+## Load data
+
+```{r}
+library(readxl)
+fB <- read_excel("~/research_pasantia_kansas_GitHub/data_sets/NNI_Rbio_allspecies.xlsx")
+```
+
+## Species Filter
+```{r}
+speci_plot<-c("Maize","Annual ryegrass","Wheat",
+              "Rice",
+              "Tall fescue","Potato")
+
+fB<-fB %>% filter(Species %in% speci_plot)
+
+fB$ID<- as.factor(as.character(fB$ID))#paso ID a character
+fB$Specie_number<- as.character(as.character(fB$Specie_number))#paso Specie_number a factor
+fB %>% glimpse()
+```
+
