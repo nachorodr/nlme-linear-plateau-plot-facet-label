@@ -49,3 +49,156 @@ fB$Specie_number<- as.character(as.character(fB$Specie_number))#paso Specie_numb
 fB %>% glimpse()
 ```
 
+## Model Bio Rel
+
+```{r}
+nl_lpBio <- nlme(Bio_rel~ifelse(NNI<NNIc,
+                   1-(NNIc-NNI)*s,
+                   1),
+     fixed = list(NNIc + s ~ Specie_number),
+     random = list(ID = pdDiag(s ~ 1)),
+     start = c(1, 0, 0, 0, 0, 0,
+               0.8, 0, 0, 0, 0, 0),
+      control = nlmeControl(pnlsTol = 0.01, 
+                           msVerbose = TRUE),
+     data = fB %>% mutate(Specie_number = as.factor(Specie_number)))
+```
+
+## lp_2 funtion
+
+```{r}
+lp_2 <- function(x, NNIc, s) { 
+  ifelse(x <fixef(nl_lpBio)[1] + NNIc,
+         1-(((fixef(nl_lpBio)[1] + NNIc)-x)*(fixef(nl_lpBio)[7] + s)),
+         1)}
+```
+
+## Data text
+
+```{r}
+dat_text<-data.frame(
+  label = c("A",#Annual ryegrass#
+            "R = 0.83",
+            "RMSE = 0.10",
+            "MBE = 0.010",
+            "B",#Maize
+            "R = 0.73",
+            "RMSE = 0.090",
+            "MBE = -0.030",
+            "C",#Potato
+            "R = 0.54",
+            "RMSE = 0.12",
+            "MBE = -0.006",
+            "D",#Rice
+            "R = 0.58",
+            "RMSE = 0.11",
+            "MBE = 0.026",
+            "E",#Tall fescue
+            "R = 0.78",
+            "RMSE = 0.10",
+            "MBE = -0.018",
+            "F",#Wheat
+            "R = 0.56",
+            "RMSE = 0.13",
+            "MBE = -0.013"),
+  Specie_number = c("1","1","1","1",
+                    "2","2","2","2",
+                    "3","3","3","3",
+                    "4","4","4","4",
+                    "5","5","5","5",
+                    "6","6","6","6"),
+  x     = c(0.4,1.18,1.28,1.28,#Annual ryegrass
+            0.4,1.18,1.28,1.28,#Maize
+            0.4,1.18,1.28,1.28,#Potato
+            0.4,1.18,1.28,1.28,#Rice
+            0.4,1.18,1.28,1.28,#Tall fescue
+            0.4,1.18,1.28,1.28#Wheat
+            ),
+  y     = c(0.9,0.6,0.5,0.4,#Annual ryegrass
+            0.9,0.6,0.5,0.4,#Maize
+            0.9,0.6,0.5,0.4,#Potato
+            0.9,0.6,0.5,0.4,#Rice
+            0.9,0.6,0.5,0.4,#Tall fescue
+            0.9,0.6,0.5,0.4#Wheat
+            ))
+
+dat_text
+```
+
+## paleta colours
+
+```{r}
+blues <- brewer.pal(6, "Dark2")
+```
+
+
+### Plot with stat funtion
+
+```{r}
+#armar labels de facet_
+Species_names <- c(
+                    `1` = "Annual ryegrass",
+                    `2` = "Maize",
+                    `3` = "Potato",
+                    `4` = "Rice",
+                    `5` = "Tall fescue",
+                    `6` = "Wheat")
+
+pB<-fB %>% 
+    ggplot(aes(NNI, Bio_rel))+
+    geom_vline(xintercept = 1, linetype = 3)+
+    geom_hline(yintercept = 1, linetype = 3)+
+    geom_point(aes(color = Specie_number),alpha = 0.75,shape=16,size = 2)+
+    coord_cartesian(ylim = c(0, 1.05),xlim = c(0.25,1.5))+
+    labs(y = expression(Relative~Biomass),
+       x = "Integrated NNI")+
+    theme_classic()+
+        stat_function(fun = function(x) {
+            ifelse(x<fixef(nl_lpBio)[1],
+                   1-(((fixef(nl_lpBio)[1])-x)*(fixef(nl_lpBio)[7])),
+                   1)},
+            data = . %>% filter(Specie_number=="1"))+
+        stat_function(fun = function(x) {
+            lp_2(x, fixef(nl_lpBio)[2], fixef(nl_lpBio)[8])},
+            data = . %>% filter(Specie_number =="2"))+
+        stat_function(fun = function(x) {
+            lp_2(x, fixef(nl_lpBio)[3], fixef(nl_lpBio)[9])},
+            data = . %>% filter(Specie_number =="3"))+
+        stat_function(fun = function(x) {
+            lp_2(x, fixef(nl_lpBio)[4], fixef(nl_lpBio)[10])},
+            data = . %>% filter(Specie_number =="4"))+
+        stat_function(fun = function(x) {
+            lp_2(x, fixef(nl_lpBio)[5], fixef(nl_lpBio)[11])},
+            data = . %>% filter(Specie_number =="5"))+
+        stat_function(fun = function(x) {
+            lp_2(x, fixef(nl_lpBio)[6], fixef(nl_lpBio)[12])},
+            data = . %>% filter(Specie_number =="6"))+
+    
+    scale_color_manual(values = brewer.pal(6, "Dark2"))+
+    
+    theme(legend.position="none")+
+    facet_wrap(~Specie_number,
+               labeller = as_labeller(Species_names))+
+    theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_blank(),
+        axis.ticks.length=unit(-0.15, "cm"), legend.background = element_blank(),
+        axis.text.x = element_text(margin=unit(c(0.5,0.5,0.5,0.5), "cm")),
+        axis.text.y = element_text(margin=unit(c(0.5,0.5,0.5,0.5), "cm")))
+
+ggsave(file="Fig_BioRel_15_ene.tiff", plot=pB, height = 18, width = 20, units = c("cm"), dpi = 300)
+```
+
+#### Add data text to plot
+
+```{r}
+ggpB<- pB + geom_text(
+  data    = dat_text,
+  mapping = aes(x = x, y = y, label = label)
+)
+
+ggpB
+
+ggsave(file="Fig_18-Ene_BioRel.svg", plot=ggpB, height = 18, width = 20, units = c("cm"), dpi = 300)
+```
+
